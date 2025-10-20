@@ -21,7 +21,7 @@ namespace OrderService.Mapping
                 }));
 
 
-            CreateMap<OrderedItems, OrderedProduct>()
+            CreateMap<OrderedItem, OrderedProduct>()
                 .ForMember(dest => dest.OrderedProductKey, option => option.Ignore())
                 .ForMember(dest => dest.ModifyBy, option => option.MapFrom(_ => Environment.MachineName));
         }

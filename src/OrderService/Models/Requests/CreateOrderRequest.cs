@@ -13,14 +13,14 @@
         /// <summary>
         /// Items assoicated to the order
         /// </summary>
-        public required ICollection<OrderedItems> Items { get; set; }
+        public required ICollection<OrderedItem> Items { get; set; }
         /// <summary>
         /// Date time when order is created
         /// </summary>
         public required DateTime CreatedAt { get;set; }
     }
 
-    public class OrderedItems
+    public class OrderedItem
     {
         /// <summary>
         /// The Product Id
