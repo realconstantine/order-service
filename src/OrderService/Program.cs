@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using OrderService.Data;
 using OrderService.Data.Repositories;
+using OrderService.Mapping;
 using OrderService.Services;
+using System.Reflection;
 
 namespace OrderService
 {
@@ -22,10 +26,25 @@ namespace OrderService
             builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
             builder.Services.AddSingleton<IOrderProcessService, OrderProcessService>();
 
+            builder.Services.AddAutoMapper(config =>
+            {
+                config.AddProfile<OrderServiceProfile>();
+            });
+
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(setup =>
+            {
+                setup.SwaggerDoc("v1", new OpenApiInfo 
+                { 
+                    Title = "Ordcer Service API", Version = "v1" 
+                });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                setup.IncludeXmlComments(xmlPath);
+            });
 
             var app = builder.Build();
 

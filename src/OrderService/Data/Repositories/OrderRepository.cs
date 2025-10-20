@@ -9,18 +9,11 @@ namespace OrderService.Data.Repositories
         Task<Guid> CreateOrderAsync(Order order);
     }
 
-    public class OrderRepository : IOrderRepository
+    public class OrderRepository(IDbContextFactory<OrderServiceDataContext> contextFactory) : IOrderRepository
     {
-        private readonly IDbContextFactory<OrderServiceDataContext> _contextFactory;
-
-        public OrderRepository(IDbContextFactory<OrderServiceDataContext> contextFactory)
-        {
-            _contextFactory = contextFactory;
-        }
-
         public async Task<Order?> GetOrderByIdAsync(Guid orderId, bool includeItemList = false)
         {
-            using var context = _contextFactory.CreateDbContext();
+            using var context = contextFactory.CreateDbContext();
 
             if (includeItemList)
             {
@@ -33,7 +26,7 @@ namespace OrderService.Data.Repositories
 
         public async Task<Guid> CreateOrderAsync(Order order)
         {
-            using var context = _contextFactory.CreateDbContext();
+            using var context = contextFactory.CreateDbContext();
             await context.Orders.AddAsync(order);
             await context.SaveChangesAsync();
 

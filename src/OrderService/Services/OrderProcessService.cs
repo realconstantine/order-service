@@ -1,7 +1,9 @@
-﻿using OrderService.Data.Entities;
+﻿using AutoMapper;
+using OrderService.Data.Entities;
 using OrderService.Data.Repositories;
 using OrderService.Models;
 using OrderService.Models.Requests;
+using OrderService.Support;
 
 namespace OrderService.Services
 {
@@ -10,87 +12,65 @@ namespace OrderService.Services
         Task<OrderProcessResult> CreateOrderAsync(CreateOrderRequest request);
     }
 
-    public class OrderProcessService : IOrderProcessService
+    public class OrderProcessService(IOrderRepository repo, IMapper mapper) : IOrderProcessService
     {
-        private readonly IOrderRepository _repo;
-
-        public OrderProcessService(IOrderRepository repo)
-        {
-            _repo = repo;
-        }
-
         public async Task<OrderProcessResult> CreateOrderAsync(CreateOrderRequest request)
         {
-            var validationResult = await ValidateOrderCreationStatus(request);
-            if (validationResult != null)
+            var result = OrderProcessResult.NewResultFor(OrderProcessType.Create)
+                .WithOrderId(request.OrderId);
+
+            // Validate if we are okay to proceed with order creation
+            var (validationPass, failedReason) = await ValidateBeforeOrderCreationAsync(request);
+            if (!validationPass)
             {
-                return validationResult;
+                return result.WithSuccessFlag(false)
+                    .WithFailedReason(failedReason);
             }
 
-            var orderEntity = BuildEntity(request);
-            await _repo.CreateOrderAsync(orderEntity);
+            // Map request to entity
+            var orderEntity = BuildOrderEntity(request);
 
-            return GetSucceedOrderProcessResult(OrderProcessType.Create, request.OrderId);
+            // Create order
+            await repo.CreateOrderAsync(orderEntity);
+
+            return result.WithSuccessFlag(true);
         }
 
-        private Order BuildEntity(CreateOrderRequest request)
+        private Order BuildOrderEntity(CreateOrderRequest request) =>
+            mapper.Map<Order>(request);
+
+
+        private async Task<(bool ValidationPass, string? FailedReason)> ValidateBeforeOrderCreationAsync(CreateOrderRequest request)
         {
-            var orderEntity = new Order()
-            {
-                OrderId = request.OrderId,
-                CustomerName = request.CustomerName,
-                CreatedAt = request.CreatedAt,
-                ModifyAt = request.CreatedAt,
-                ModifyBy = Environment.MachineName
-            };
-
-            var productEntites = request.Items.Select(item => new OrderedProduct()
-            {
-                OrderId = request.OrderId,
-                Order = orderEntity,
-                ProductId = item.ProductId,
-                Quantity = item.Quantity,
-                CreatedAt = request.CreatedAt,
-                ModifyAt = request.CreatedAt,
-                ModifyBy = Environment.MachineName
-            }).ToList();
-
-            orderEntity.Products.AddRange(productEntites);
-
-            return orderEntity;
-        }
-
-        private async Task<OrderProcessResult?> ValidateOrderCreationStatus(CreateOrderRequest request)
-        {
-            var order = await _repo.GetOrderByIdAsync(request.OrderId);
+            var order = await repo.GetOrderByIdAsync(request.OrderId);
             if (order != null)
             {
-                return GetFailedOrderProcessResult(OrderProcessType.Create, "Order with same Id is already created");
+                return (false, ErrorMessages.OrderAlreadyExists);
             }
 
             if (string.IsNullOrWhiteSpace(request.CustomerName))
             {
-                return GetFailedOrderProcessResult(OrderProcessType.Create, "Customer Name must be present");
+                return (false, ErrorMessages.MissingCustomerName);
             }
 
             var items = request.Items;
             if (items.Count == 0)
             {
-                return GetFailedOrderProcessResult(OrderProcessType.Create, "No items found in the order");
+                return (false, ErrorMessages.EmptyItems);
             }
 
             if (items.Any(item => item.Quantity <= 0))
             {
-                return GetFailedOrderProcessResult(OrderProcessType.Create, "There are items with incorrect Quantity values");
+                return (false, ErrorMessages.IncorrectQuantityValues);
             }
 
-            return null;
+            if (items.GroupBy(item => item.ProductId)
+                .Any(group => group.Count() > 1))
+            {
+                return (false, ErrorMessages.DuplicateProducts);
+            }
+
+            return (true, null);
         }
-
-        private static OrderProcessResult GetSucceedOrderProcessResult(OrderProcessType orderProcessType, Guid orderId) =>
-            new(true, orderProcessType, OrderId: orderId);
-
-        private static OrderProcessResult GetFailedOrderProcessResult(OrderProcessType orderProcessType, string failedReason) =>
-            new(false, orderProcessType, FailedReason: failedReason);
     }
 }

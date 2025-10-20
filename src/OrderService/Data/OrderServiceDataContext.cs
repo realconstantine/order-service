@@ -11,7 +11,6 @@ namespace OrderService.Data
         }
 
         public DbSet<Order> Orders { get; set; }
-
         public DbSet<OrderedProduct> OrderedProducts { get; set; }
     }
 }
