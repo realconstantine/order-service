@@ -39,7 +39,9 @@ namespace OrderService.Services
             {
                 OrderId = request.OrderId,
                 CustomerName = request.CustomerName,
-                CreatedAt = request.CreatedAt
+                CreatedAt = request.CreatedAt,
+                ModifyAt = request.CreatedAt,
+                ModifyBy = Environment.MachineName
             };
 
             var productEntites = request.Items.Select(item => new OrderedProduct()
@@ -47,7 +49,10 @@ namespace OrderService.Services
                 OrderId = request.OrderId,
                 Order = orderEntity,
                 ProductId = item.ProductId,
-                Quantity = item.Quantity
+                Quantity = item.Quantity,
+                CreatedAt = request.CreatedAt,
+                ModifyAt = request.CreatedAt,
+                ModifyBy = Environment.MachineName
             }).ToList();
 
             orderEntity.Products.AddRange(productEntites);

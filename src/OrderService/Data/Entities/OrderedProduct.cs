@@ -12,5 +12,8 @@ namespace OrderService.Data.Entities
         public Guid ProductId { get; set; }
         public int Quantity { get; set; }
         public required Order Order { get;set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime ModifyAt { get; set; }
+        public string ModifyBy { get; set; } = string.Empty;
     }
 }
