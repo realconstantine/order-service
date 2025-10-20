@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
+using OrderService.Data.Repositories;
+using OrderService.Services;
 
 namespace OrderService
 {
@@ -12,10 +14,13 @@ namespace OrderService
             // Add services to the container.
 
             var orderConnnectionString = GetOrderDbConnectionString(builder.Configuration);
-            builder.Services.AddDbContext<OrderServiceDataContext>(options =>
+            builder.Services.AddDbContextFactory<OrderServiceDataContext>(options =>
             {
                 options.UseSqlite(orderConnnectionString);
             });
+
+            builder.Services.AddSingleton<IOrderRepository, OrderRepository>();
+            builder.Services.AddSingleton<IOrderProcessService, OrderProcessService>();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
